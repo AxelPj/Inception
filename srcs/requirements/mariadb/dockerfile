@@ -1,16 +1,17 @@
-FROM debian:bookworm
+FROM debian:12-slim
 
-RUN apt-get update \
-  && apt-get install -y mariadb-server mariadb-client tini \
-  && rm -rf /var/lib/apt/lists/* \
-  && rm -rf /var/lib/mysql/*
+RUN  apt update && apt install -y mariadb-server
+RUN  rm -rf /var/lib/apt/lists/*
+
+RUN  mkdir -p /var/run/mysqld && \
+     chown -R mysql:mysql /var/run/mysqld
 
 COPY conf/50-server.cnf /etc/mysql/mariadb.conf.d/50-server.cnf
+
 COPY tools/mdb_script.sh /usr/local/bin/mdb_script.sh
+RUN  chmod +x /usr/local/bin/mdb_script.sh
 
-RUN chmod 755 /usr/local/bin/mdb_script.sh \
-  && mkdir -p /run/mysqld \
-  && chown -R mysql:mysql /run/mysqld
+EXPOSE 3306
 
-ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/mdb_script.sh"]
-CMD ["mariadbd"]
+ENTRYPOINT ["/usr/local/bin/mdb_script.sh"]
+CMD ["mysqld"]

@@ -6,8 +6,9 @@ all: up
 up:
 	mkdir -p ${DATA_PATH}/wordpress
 	mkdir -p ${DATA_PATH}/mariadb
-	$(COMPOSE) up -d --build
 	sudo chown -R axelpeti:axelpeti ${DATA_PATH}
+	sudo chown -R 999:999 /home/axelpeti/data/mariadb
+	$(COMPOSE) up -d --build
 
 down:
 	$(COMPOSE) down
