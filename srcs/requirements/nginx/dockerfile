@@ -1,0 +1,38 @@
+#premiere couche qui permettra de cree le certificat auto signer et sa clee (temporaire car ecraser apres la deuxieme couche)
+FROM debian:bookworm AS cert-builder
+
+RUN apt-get update && apt-get install -y openssl
+
+RUN mkdir -p /tmp/cert && \
+	 openssl req -x509 -nodes -days 365 \
+	 -out /tmp/cert/inception.crt \
+	-keyout /tmp/cert/inception.key \
+	-subj "/C=FR/ST=Occitanie/L=Perpignan/O=42/OU=42 Perpignan/CN=axelpeti.42.fr"
+
+FROM debian:bookworm
+
+RUN apt update && apt install -y nginx \
+	tini
+	
+RUN mkdir -p /etc/nginx/ssl
+
+#copy de ma clee et mon certificat pour la securite via la premiere couche
+COPY --from=cert-builder /tmp/cert/inception.crt /etc/nginx/ssl/inception.crt
+COPY --from=cert-builder /tmp/cert/inception.key /etc/nginx/ssl/inception.key 
+
+#suppression de la config par default pour redefinir sois meme le comportement attendu
+RUN rm -rf /etc/nginx/sites-enabled/default
+
+#redirection des log error vers la sortie du container pour les afficher via docker logs (make logs apres makefile)
+RUN ln -sf /dev/stdout /var/log/nginx/access.log \
+	&& ls -sf /dev/stderr /var/log/nginx/error.log
+
+COPY /conf/nginx.conf /etc/nginx/conf.d/nginx.conf
+
+EXPOSE 443
+
+# permet de lancer tini qui permet de lire les signaux ainsi que de gerer les PID
+# le "--" permet de dire que la couche CMD ne sera pas une option de tini mais bien une commande a part entiere 
+ENTRYPOINT ["/usr/bin/tini", "--"]
+
+CMD [ "nginx", "-g", "daemon off;" ]

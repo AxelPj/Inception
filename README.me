@@ -1,0 +1,105 @@
+*This project has been created as part of the 42 curriculum by axelpeti
+
+# Inception
+
+## Description
+
+Présentation générale du projet :
+Inception est un projets dans lequel nous apprenons a utiliser Docker dans la realisation d'une petite architecture Web avec plusieur conteineur
+
+l'architecture sera compose de :  
+**Nginx** (Serveur Web, reverse proxy)  
+**MariaDb** (Base de donne)  
+**WordPress** (site internet)
+
+### Docker dans ce projet
+
+On utilise Docker dans ce projet pour centraliser et isoler differents service necessaire au fonctionnement de notre site Web 
+Chaque service est dans sont propre conteiner et comunique avec les autres via un reseau Docker
+Cela permet de :
+
+-Séparer les responsabilités (NGINX, WordPress, MariaDB)
+
+-Faciliter le déploiement et la reproductibilité
+
+-Gérer la persistance des données grâce aux volumes
+
+-Assurer une architecture propre et organisée
+
+#### Choix de conception
+
+J’ai choisi d’utiliser l’avant-dernière version stable de Debian (Bookworm), comme sur ma machine virtuelle, afin de rester dans un environnement familier et cohérent avec mon système principal.
+
+Ce choix m’a permis de gagner en simplicité lors du développement et du débogage.
+
+Cependant, si je devais recommencer le projet, j’opterais probablement pour Alpine Linux pour sa légèreté et sa surface minimale.
+
+#### Virtual Machines vs Docker
+
+Comparaison des deux approches.
+
+#### Secrets vs Variables d'environnement
+
+Les variables d’environnement utilisées dans ce projet ne contiennent pas de mots de passe, afin d’éviter d’exposer des informations sensibles.
+
+Pour des raisons de sécurité, les identifiants (comme les mots de passe de la base de données) sont stockés dans des **Docker secrets**.
+
+Ces secrets sont montés sous forme de fichiers dans le conteneur (par exemple dans `/run/secrets/`), puis lus par les scripts d’initialisation afin d’être utilisés lors de la configuration des services.
+
+Cette approche permet de :
+- Éviter d’afficher les mots de passe dans le `docker-compose.yml`
+- Réduire les risques liés aux variables d’environnement visibles via `docker inspect`
+- Séparer clairement la configuration sensible du reste de l’application
+
+#### Docker Network vs Host Network
+
+Différences et pourquoi on utilise un réseau Docker dédié.
+
+#### Docker Volumes vs Bind Mounts
+
+Différences et pourquoi le projet impose les named volumes.
+
+## Instructions
+
+### Prérequis
+
+- Docker et Docker Compose installés
+- connaissance Nginx, mariaDB, WordPress
+- Une VM (VirtualBox, etc.)
+- Modifier `/etc/hosts` pour pointer `axelpeti.42.fr` vers `127.0.0.1`
+
+### Installation
+```bash
+git clone ...
+cd inception
+make
+```
+
+### Lancer / Arrêter
+```bash
+make        # build et lance
+make down   # arrête
+make clean  # supprime les conteneurs et volumes
+```
+
+## Resources
+
+### Documentation officielle
+
+- [Docker docs](https://docs.docker.com)
+- [NGINX docs] (https://nginx.org/en/docs/)
+- (https://www.nicelydev.com/nginx/trouver-nginx-conf)
+- [WordPress doc] (https://www.ionos.fr/digitalguide/serveur/know-how/wordpress-dans-des-conteneurs-docker/)
+- (https://wp-cli.org/)
+- [MariaDB docs] (https://mariadb.com/kb/en/)
+- (https://www.ionos.fr/digitalguide/hebergement/aspects-techniques/installer-mariadb-sous-debian-11/)
+### Tutoriels utiles
+
+- https://openclassrooms.com/fr/courses/8431896-optimisez-votre-deploiement-en-creant-des-conteneurs-avec-docker
+- https://dyma.fr/formations/docker?campaignId=21779107196&device=c&utm_source=google&gad_source=1&gad_campaignid=21779107196&gclid=CjwKCAiA-__MBhAKEiwASBmsBMNaccPWrrdgGF5b1E306dANQtIqjIxUcxZ0qZsT02FMzrG3uPxrFxoCF0cQAvD_BwE
+
+### Utilisation de l'IA
+
+Aide pour degrossir le sujet et aider a savoir vers ou ce diriger au debut
+Aide pour la partie scripting
+Aide pour le debug du scripting

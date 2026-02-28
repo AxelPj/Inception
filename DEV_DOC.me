@@ -1,0 +1,171 @@
+# DEV_DOC — Documentation Développeur
+
+## Prérequis
+
+Pour pouvoir lancer le projet correctement il faut :
+
+- Docker >= 20.x  
+- Docker Compose >= 2.x  
+- Une machine virtuelle (perso je suis sur Debian, comme d’habitude)  
+- Les droits sudo pour modifier le `/etc/hosts`  
+
+Rien de plus compliqué, mais sans ça le projet ne tournera pas correctement.
+
+---
+
+## Structure du projet
+
+Voici comment j’ai organisé mon projet :
+
+```
+.
+├── Makefile
+├── secrets/
+│   ├── wd_password.txt
+│   ├── db_password.txt
+│   └── db_root_password.txt
+└── srcs/
+    ├── .env
+    ├── docker-compose.yml
+    └── requirements/
+        ├── nginx/
+        │   ├── Dockerfile
+        │   ├── conf/
+        ├── wordpress/
+        │   ├── Dockerfile
+        │   └── tools/
+        └── mariadb/
+            ├── Dockerfile
+            ├── conf/
+            └── tools/
+```
+
+On a donc :
+
+- un **Makefile** pour centraliser toutes les commandes  
+- un dossier **secrets** pour éviter de mettre des mots de passe en dur  
+- un dossier **srcs** qui contient toute l’architecture Docker  
+
+Chaque service (nginx, wordpress, mariadb) a son propre dossier avec son Dockerfile, sa conf et ses tools.
+
+---
+
+## Configuration initiale
+
+### 1. Cloner le repo
+
+```bash
+git clone <repo_url>
+cd inception
+```
+
+Classique.
+
+---
+
+### 2. Créer les fichiers secrets
+
+Je n’utilise pas de variables d’environnement pour les mots de passe pour des raisons évidentes de sécurité.  
+Donc je crée mes fichiers secrets :
+
+```bash
+mkdir -p secrets
+echo "monmotdepasse" > secrets/db_password.txt
+echo "rootpassword"  > secrets/db_root_password.txt
+echo "wpuser:wppass" > secrets/credentials.txt
+```
+
+Ensuite mes scripts vont lire directement dans ces fichiers.
+
+---
+
+### 3. Configurer le fichier `.env`
+
+Dans `srcs/.env` :
+
+```bash
+DOMAIN_NAME=login.42.fr
+MYSQL_USER=wpuser
+MYSQL_DB=wordpress
+# etc...
+```
+
+C’est ici que je centralise les variables utilisées par docker-compose.
+
+---
+
+### 4. Modifier le `/etc/hosts`
+
+Pour que le domaine fonctionne en local :
+
+```bash
+echo "127.0.0.1 login.42.fr" | sudo tee -a /etc/hosts
+```
+
+Sinon le navigateur ne saura pas où pointer.
+
+---
+
+## Build et lancement
+
+Tout passe par le Makefile, ça évite de taper des commandes longues :
+
+```bash
+make        # docker compose up --build -d
+make down   # docker compose down
+make clean  # down + suppression des images
+make fclean # clean + suppression des volumes et données
+make re     # fclean + make
+```
+
+Je centralise tout pour que ce soit plus propre et plus simple à relancer.
+
+---
+
+## Commandes Docker utiles
+
+Quelques commandes utiles pendant le dev :
+
+```bash
+# Voir les conteneurs
+docker compose ps
+
+# Entrer dans un conteneur
+docker exec -it nginx sh
+docker exec -it wordpress sh
+docker exec -it mariadb sh
+
+# Voir les logs en temps réel
+docker compose logs -f
+
+# Inspecter un volume
+docker volume inspect srcs_wordpress
+docker volume inspect srcs_db
+```
+
+---
+
+## Persistance des données
+
+Les données sont stockées directement sur la machine hôte dans :
+
+```
+/home/login/data/
+├── wordpress/   ← fichiers du site WordPress
+└── db/          ← données MariaDB
+```
+
+Ces dossiers correspondent aux volumes définis dans le `docker-compose.yml`.
+
+Même si les conteneurs sont supprimés, les données restent.
+
+---
+
+## Notes importantes
+
+- Aucun `tail -f`, `sleep infinity` ou boucle infinie dans les entrypoints  
+- Aucun mot de passe en dur dans les Dockerfiles  
+- Le tag `latest` est interdit  
+- NGINX est le seul point d’entrée  
+- Uniquement le port 443 (TLSv1.2 / TLSv1.3)  
+- Les réseaux `host`, `--link` et `links:` sont interdits  

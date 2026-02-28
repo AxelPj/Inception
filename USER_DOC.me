@@ -1,0 +1,81 @@
+# USER_DOC — Documentation Utilisateur
+
+## Services disponibles
+
+Voici simplement à quoi sert chaque service dans le projet :
+
+| Service   | Rôle                              | Port |
+|-----------|-----------------------------------|------|
+| NGINX     | Reverse proxy / point d'entrée    | 443  |
+| WordPress | Site web + interface admin        | -    |
+| MariaDB   | Base de données                   | -    |
+
+NGINX est le seul point d’entrée, c’est lui qui reçoit les requêtes en HTTPS.  
+WordPress gère le site et l’interface d’administration.  
+MariaDB sert uniquement à stocker les données du site.
+
+---
+
+## Démarrer et arrêter le projet
+
+Tout passe par le Makefile pour simplifier :
+
+```bash
+# Démarrer le projet
+make
+
+# Arrêter (sans supprimer les données)
+make down
+
+# Tout supprimer (conteneurs + volumes + données)
+make fclean
+```
+
+`make` build automatiquement si nécessaire.
+
+---
+
+## Accéder au site
+
+Une fois lancé :
+
+- Site principal : `https://axelpeti.42.fr`
+- Interface admin WordPress : `https://axelpeti.42.fr/wp-admin`
+
+Au premier accès, le navigateur va sûrement afficher un avertissement de sécurité (certificat auto-signé).  
+Il suffit de l’accepter pour continuer.
+
+---
+
+## Gérer les identifiants
+
+Les identifiants ne sont pas en dur dans le projet.
+
+Ils sont stockés dans :
+
+- `secrets/credentials.txt` → identifiants WordPress  
+- `secrets/db_password.txt` → mot de passe utilisateur base de données  
+- `secrets/db_root_password.txt` → mot de passe root MariaDB  
+- `srcs/.env` → variables d’environnement générales  
+
+⚠️ Ces fichiers ne doivent jamais être commit sur Git.
+
+---
+
+## Vérifier que les services tournent
+
+Pour vérifier que tout fonctionne correctement :
+
+```bash
+# Voir l’état des conteneurs
+docker compose ps
+
+# Voir les logs d’un service
+docker compose logs nginx
+docker compose logs wordpress
+docker compose logs mariadb
+```
+
+Tous les conteneurs doivent afficher le statut `Up`.
+
+Si un service crash, regarder directement les logs pour comprendre le problème.
