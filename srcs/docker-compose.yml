@@ -41,6 +41,7 @@ services:
     secrets:
       - db_password
       - db_root_password
+      - wd_password
     env_file:
       - .env
     volumes:
@@ -78,4 +79,6 @@ secrets:
     file: ../secrets/db_password.txt
   db_root_password:
     file: ../secrets/db_root_password.txt
+  wd_password:
+    file: ../secrets/wd_password.txt
 

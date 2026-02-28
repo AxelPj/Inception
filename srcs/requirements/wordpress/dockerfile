@@ -26,4 +26,3 @@ COPY /tools/wd_script.sh /usr/local/bin/wd_script.sh
 RUN chmod +x /usr/local/bin/wd_script.sh
 
 ENTRYPOINT ["/usr/local/bin/wd_script.sh"]
-

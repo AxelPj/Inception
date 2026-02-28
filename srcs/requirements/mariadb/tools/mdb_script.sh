@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 SQL_PASSWORD="$(tr -d '\n' < /run/secrets/db_password)"
 SQL_ROOT_PASSWORD="$(tr -d '\n' < /run/secrets/db_root_password)"
 
