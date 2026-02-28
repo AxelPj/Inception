@@ -1,57 +1,39 @@
 #!/bin/bash
-set -euo pipefail
 
-: "${SQL_DATABASE:?SQL_DATABASE not set}"
-: "${SQL_USER:?SQL_USER not set}"
-
+# secrets (sinon SQL_PASSWORD/SQL_ROOT_PASSWORD sont vides)
 SQL_PASSWORD="$(tr -d '\n' < /run/secrets/db_password)"
 SQL_ROOT_PASSWORD="$(tr -d '\n' < /run/secrets/db_root_password)"
 
-DATADIR="/var/lib/mysql"
-RUNDIR="/run/mysqld"
-SOCKET="$RUNDIR/mysqld.sock"
-MARKER="$DATADIR/.inception_initialized"
+# dossier socket/pid demandé par ton 50-server.cnf
+mkdir -p /run/mysqld
+chown -R mysql:mysql /run/mysqld /var/lib/mysql
 
-# Création des dossiers runtime + droits
-mkdir -p "$RUNDIR"
-chown -R mysql:mysql "$RUNDIR" "$DATADIR" || true
-
-# Bootstrap des tables système si absent
-if [ ! -d "$DATADIR/mysql" ]; then
-  echo "[mariadb] Installing system tables..."
-  mariadb-install-db --user=mysql --datadir="$DATADIR" >/dev/null
+# tables système (sinon mysql.db/mysql.plugin manquent)
+if [ ! -d "/var/lib/mysql/mysql" ]; then
+	mariadb-install-db --user=mysql --datadir=/var/lib/mysql > /dev/null
 fi
 
-# Init app (une seule fois)
-if [ ! -f "$MARKER" ]; then
-  echo "[mariadb] Initializing database and users..."
+if [ ! -d "/var/lib/mysql/$SQL_DATABASE" ]; then
+	service mariadb start
 
-  mariadbd --user=mysql --skip-networking --socket="$SOCKET" &
-  pid="$!"
+	# wait mariadb start
+	until mysqladmin ping; do
+		sleep 1
+	done
 
-  # Wait server ready
-  for i in {1..60}; do
-    if mysqladmin --socket="$SOCKET" ping --silent >/dev/null 2>&1; then
-      break
-    fi
-    sleep 1
-  done
+	# configure the DB with SQL instructions
+	mariadb -e "CREATE DATABASE IF NOT EXISTS \`${SQL_DATABASE}\`;"
+	mariadb -e "CREATE USER IF NOT EXISTS \`${SQL_USER}\`@'%' IDENTIFIED BY '${SQL_PASSWORD}';"
+	mariadb -e "GRANT ALL PRIVILEGES ON \`${SQL_DATABASE}\`.* TO \`${SQL_USER}\`@'%';"
+	mariadb -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${SQL_ROOT_PASSWORD}';"
+	mariadb -u root -p"${SQL_ROOT_PASSWORD}" -e "FLUSH PRIVILEGES;"
 
-  mariadb --socket="$SOCKET" -e "CREATE DATABASE IF NOT EXISTS \`${SQL_DATABASE}\`;"
-  mariadb --socket="$SOCKET" -e "CREATE USER IF NOT EXISTS \`${SQL_USER}\`@'%' IDENTIFIED BY '${SQL_PASSWORD}';"
-  mariadb --socket="$SOCKET" -e "GRANT ALL PRIVILEGES ON \`${SQL_DATABASE}\`.* TO \`${SQL_USER}\`@'%';"
-  mariadb --socket="$SOCKET" -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${SQL_ROOT_PASSWORD}';"
-  mariadb --socket="$SOCKET" -u root -p"${SQL_ROOT_PASSWORD}" -e "FLUSH PRIVILEGES;"
+	mysqladmin -u root -p"${SQL_ROOT_PASSWORD}" shutdown
 
-  touch "$MARKER"
-
-  mysqladmin --socket="$SOCKET" -u root -p"${SQL_ROOT_PASSWORD}" shutdown
-  wait "$pid" 2>/dev/null || true
-
-  echo "[mariadb] Initialization complete."
+	echo "DB Created !"
 else
-  echo "[mariadb] Already initialized."
+	echo "DB Already exist"
 fi
 
-# Lancement final du serveur (foreground)
-exec "$@"	
+# start mariadb
+exec "$@"
